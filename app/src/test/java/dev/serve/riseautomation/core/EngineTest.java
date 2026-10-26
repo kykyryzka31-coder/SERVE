@@ -129,4 +129,45 @@ public final class EngineTest {
             engine.start(); assertTrue(good.await(2, TimeUnit.SECONDS)); assertEquals(1, session.snapshot(0).failures);
         }
     }
+    @Test public void stopIsNonblockingAndLateUncooperativeWorkIsQuarantined() throws Exception {
+        CountDownLatch entered = new CountDownLatch(1), release = new CountDownLatch(1), second = new CountDownLatch(1);
+        AtomicReference<Thread> workerThread = new AtomicReference<>();
+        AtomicInteger calls = new AtomicInteger();
+        Task stubborn = new Task("stubborn", AutomationTask.Category.CITY, 1) {
+            public long timeoutMillis() { return 10000; }
+            public int execute(Cancellation token) {
+                workerThread.set(Thread.currentThread());
+                if (calls.incrementAndGet() == 1) {
+                    entered.countDown();
+                    boolean released = false;
+                    while (!released) {
+                        try { released = release.await(2, TimeUnit.SECONDS); }
+                        catch (InterruptedException ignored) { /* Deliberately noncooperative test task. */ }
+                    }
+                    return 99;
+                }
+                return 0;
+            }
+        };
+        Task other = new Task("other", AutomationTask.Category.WORLD, 1) {
+            public int execute(Cancellation token) { second.countDown(); return 0; }
+        };
+        AutomationSession session = new AutomationSession();
+        try (AutomationEngine engine = new AutomationEngine(session, Arrays.asList(stubborn, other), () -> System.nanoTime()/1000000)) {
+            engine.start(); assertTrue(entered.await(2, TimeUnit.SECONDS));
+            assertNotSame(Thread.currentThread(), workerThread.get());
+            long before = System.nanoTime(); engine.stop();
+            assertTrue("Stop blocked on worker", System.nanoTime()-before < TimeUnit.SECONDS.toNanos(1));
+            engine.start();
+            assertFalse("New work overlapped cancelled work", second.await(250, TimeUnit.MILLISECONDS));
+            release.countDown(); assertTrue(second.await(2, TimeUnit.SECONDS));
+            assertEquals(0, session.snapshot(0).succeeded); assertEquals(0, session.snapshot(0).failures);
+        } finally { release.countDown(); }
+    }
+    @Test public void closedEngineCannotRestart() {
+        AutomationSession session = new AutomationSession();
+        AutomationEngine engine = new AutomationEngine(session, Collections.emptyList(), () -> 100);
+        engine.start(); engine.close(); engine.start(); engine.resume();
+        assertEquals(AutomationSession.State.STOPPED, session.snapshot(200).state);
+    }
 }

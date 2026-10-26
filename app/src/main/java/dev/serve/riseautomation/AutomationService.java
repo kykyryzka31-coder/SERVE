@@ -40,7 +40,10 @@ public final class AutomationService extends Service {
         if (START.equals(action) || RESUME.equals(action)) {
             if (GameAccessibilityService.connected()) {
                 if (RESUME.equals(action)) engine.resume(); else engine.start();
-            } else engine.pause("Включите управление через специальные возможности");
+            } else {
+                engine.pause("Включите управление через специальные возможности");
+                android.widget.Toast.makeText(this, "Откройте приложение и включите доступ в специальных возможностях", android.widget.Toast.LENGTH_LONG).show();
+            }
         } else if (PAUSE.equals(action)) engine.pause("На паузе");
         else if (STOP.equals(action) || CLOSE.equals(action)) engine.stop();
         overlay.refresh();

@@ -52,6 +52,7 @@ public final class AutomationEngine implements AutoCloseable {
     private synchronized void tick() {
         if (closed) return;
         long now = clock.getAsLong();
+        if (current != null && !current.task.enabled() && !current.cancellation.isCancelled()) cancelCurrent();
         if (current != null) {
             if (!current.exited && !current.accounted && now >= current.deadline
                     && !current.cancellation.isCancelled()) {
@@ -79,8 +80,12 @@ public final class AutomationEngine implements AutoCloseable {
             attempt.cancellation.check();
             synchronized (this) {
                 if (valid(attempt)) {
-                    session.result(actions, attempt.task.id());
-                    scheduler.success(attempt.task, clock.getAsLong());
+                    long now = clock.getAsLong();
+                    if (now >= attempt.deadline) {
+                        session.failure(); scheduler.failure(attempt.task, now);
+                    } else {
+                        session.result(actions, attempt.task.id()); scheduler.success(attempt.task, now);
+                    }
                     attempt.accounted = true;
                 }
             }
