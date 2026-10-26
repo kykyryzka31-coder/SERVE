@@ -90,7 +90,13 @@ public final class AutomationEngine implements AutoCloseable {
                 }
             }
         } catch (CancellationException | InterruptedException cancelled) {
-            // User cancellation and disconnect are not task failures.
+            synchronized (this) {
+                // Only an actual session/token cancellation is free of failure accounting.
+                if (valid(attempt)) {
+                    session.failure(); scheduler.failure(attempt.task, clock.getAsLong());
+                    attempt.accounted = true;
+                }
+            }
         } catch (Exception failure) {
             synchronized (this) {
                 if (valid(attempt)) {

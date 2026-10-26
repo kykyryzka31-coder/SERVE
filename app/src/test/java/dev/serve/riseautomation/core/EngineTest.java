@@ -170,4 +170,18 @@ public final class EngineTest {
         engine.start(); engine.close(); engine.start(); engine.resume();
         assertEquals(AutomationSession.State.STOPPED, session.snapshot(200).state);
     }
+    @Test public void unexplainedTaskCancellationIsAnIsolatedFailure() throws Exception {
+        CountDownLatch next = new CountDownLatch(1);
+        Task broken = new Task("unexpected-cancel", AutomationTask.Category.CITY, 1) {
+            public int execute(Cancellation token) { throw new CancellationException("Not requested by user"); }
+        };
+        Task healthy = new Task("next", AutomationTask.Category.WORLD, 1) {
+            public int execute(Cancellation token) { next.countDown(); return 0; }
+        };
+        AutomationSession session = new AutomationSession();
+        try (AutomationEngine engine = new AutomationEngine(session, Arrays.asList(broken, healthy), () -> System.nanoTime()/1000000)) {
+            engine.start(); assertTrue(next.await(2, TimeUnit.SECONDS));
+            assertEquals(1, session.snapshot(0).failures);
+        }
+    }
 }
