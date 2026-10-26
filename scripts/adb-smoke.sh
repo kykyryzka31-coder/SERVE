@@ -15,4 +15,4 @@ printf '%s\n' "$result"
 [[ "$result" == *'Status: ok'* ]] || exit 1
 "$ADB" -s "$ANDROID_SERIAL" shell pidof dev.serve.riseautomation
 "$ADB" -s "$ANDROID_SERIAL" shell uiautomator dump /sdcard/serve-window.xml >/dev/null
-"$ADB" -s "$ANDROID_SERIAL" shell cat /sdcard/serve-window.xml | python3 -c 'import sys,xml.etree.ElementTree as E; r=E.fromstring(sys.stdin.read()); assert any(n.get("text")=="Основа проекта готова. Автоматизация не запущена." for n in r.iter("node")), "Expected application screen missing"'
+"$ADB" -s "$ANDROID_SERIAL" shell cat /sdcard/serve-window.xml | python3 -c 'import sys,xml.etree.ElementTree as E; r=E.fromstring(sys.stdin.read()); assert any(n.get("text")=="Rise Automation" for n in r.iter("node")), "App title missing"; assert any(n.get("text", "").startswith("Успешных действий:") for n in r.iter("node")), "Session statistics missing"'

@@ -1,4 +1,6 @@
 <resources>
     <string name="app_name">Rise Automation</string>
-    <string name="setup_status">Основа проекта готова. Автоматизация не запущена.</string>
+    <string name="accessibility_description">Управление выбранными задачами Rise of Kingdoms: чтение интерфейса и жесты только во время запущенной сессии. Игровые задачи пока не проверены и отключены. Доступ включается и отключается вами в настройках Android. Данные экрана не сохраняются и не отправляются.</string>
+    <string name="session_status">%1$s\n%2$s</string>
+    <string name="feature_pending">%1$s · ожидает проверки</string>
 </resources>
