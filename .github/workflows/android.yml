@@ -11,9 +11,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - uses: android-actions/setup-android@v3
-      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'platform-tools'
-      - run: ./scripts/check.sh
+      - name: Install required Android SDK packages
+        run: |
+          sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'platform-tools'
+      - name: Build and test
+        run: ./scripts/check.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
